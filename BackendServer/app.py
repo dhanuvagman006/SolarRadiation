@@ -7,6 +7,8 @@ from tensorflow.keras.models import load_model
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__)
 
+FEATURES = ["T2M", "RH2M", "WS2M", "CLOUD_AMT", "PRECTOTCORR", "day", "month", "year"]
+
 MODELS_CONFIG = {
     "solar_lstm": {
         "model_path": os.path.join(BASE_DIR, "Models", "solar_lstm.keras"),
@@ -15,8 +17,53 @@ MODELS_CONFIG = {
         "plots_dir": os.path.join(BASE_DIR, "solar_lstm_plots"),
         "time_steps": 7,
         "future_steps": 7,
-        "features": ["T2M", "RH2M", "WS2M", "CLOUD_AMT", "PRECTOTCORR", "day", "month", "year"]
-    }
+        "features": FEATURES,
+    },
+    "solar_gru": {
+        "model_path": os.path.join(BASE_DIR, "Models", "solar_gru.keras"),
+        "x_scaler": os.path.join(BASE_DIR, "Models", "solar_gru", "x_scaler.pkl"),
+        "y_scaler": os.path.join(BASE_DIR, "Models", "solar_gru", "y_scaler.pkl"),
+        "plots_dir": os.path.join(BASE_DIR, "solar_gru_plots"),
+        "time_steps": 7,
+        "future_steps": 7,
+        "features": FEATURES,
+    },
+    "solar_bidirectional_lstm": {
+        "model_path": os.path.join(BASE_DIR, "Models", "solar_bidirectional_lstm.keras"),
+        "x_scaler": os.path.join(BASE_DIR, "Models", "solar_bidirectional_lstm", "x_scaler.pkl"),
+        "y_scaler": os.path.join(BASE_DIR, "Models", "solar_bidirectional_lstm", "y_scaler.pkl"),
+        "plots_dir": os.path.join(BASE_DIR, "solar_bidirectional_lstm_plots"),
+        "time_steps": 7,
+        "future_steps": 7,
+        "features": FEATURES,
+    },
+    "solar_cnn_lstm": {
+        "model_path": os.path.join(BASE_DIR, "Models", "solar_cnn_lstm.keras"),
+        "x_scaler": os.path.join(BASE_DIR, "Models", "solar_cnn_lstm", "x_scaler.pkl"),
+        "y_scaler": os.path.join(BASE_DIR, "Models", "solar_cnn_lstm", "y_scaler.pkl"),
+        "plots_dir": os.path.join(BASE_DIR, "solar_cnn_lstm_plots"),
+        "time_steps": 7,
+        "future_steps": 7,
+        "features": FEATURES,
+    },
+    "solar_stacked_lstm": {
+        "model_path": os.path.join(BASE_DIR, "Models", "solar_stacked_lstm.keras"),
+        "x_scaler": os.path.join(BASE_DIR, "Models", "solar_stacked_lstm", "x_scaler.pkl"),
+        "y_scaler": os.path.join(BASE_DIR, "Models", "solar_stacked_lstm", "y_scaler.pkl"),
+        "plots_dir": os.path.join(BASE_DIR, "solar_stacked_lstm_plots"),
+        "time_steps": 7,
+        "future_steps": 7,
+        "features": FEATURES,
+    },
+    "solar_attention_lstm": {
+        "model_path": os.path.join(BASE_DIR, "Models", "solar_attention_lstm.keras"),
+        "x_scaler": os.path.join(BASE_DIR, "Models", "solar_attention_lstm", "x_scaler.pkl"),
+        "y_scaler": os.path.join(BASE_DIR, "Models", "solar_attention_lstm", "y_scaler.pkl"),
+        "plots_dir": os.path.join(BASE_DIR, "solar_attention_lstm_plots"),
+        "time_steps": 7,
+        "future_steps": 7,
+        "features": FEATURES,
+    },
 }
 
 class ModelManager:

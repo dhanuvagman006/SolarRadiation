@@ -10,7 +10,7 @@
     <ul>
         {% for model in models %}
             <li>
-                <a href="/{{ model }}">{{ model }}</a>
+                <a href="/{{ model }}">{{ model | replace('_', ' ') | title }}</a>
             </li>
         {% endfor %}
     </ul>

@@ -197,7 +197,7 @@
 </head>
 <body>
 
-    <h1 id="main-heading">{{ model_name }} Predictor</h1>
+    <h1 id="main-heading">{{ model_name | replace('_', ' ') | title }} Predictor</h1>
     <p class="subtitle">Forecast the next 7 days of solar radiation using advanced deep learning.</p>
 
     <div class="container">
