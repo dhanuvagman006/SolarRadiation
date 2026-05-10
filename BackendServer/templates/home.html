@@ -1,19 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Solar Models</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Radiation Prediction for DK Region</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            width: 100%;
+            padding: 40px 20px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0 0 10px 0;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(56, 189, 248, 0.5);
+        }
+        p.subtitle {
+            color: #94a3b8;
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+        }
+        .map-container {
+            width: 90%;
+            max-width: 1200px;
+            height: 600px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 50px;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            z-index: 1;
+        }
+        /* Custom Popup Styles */
+        .leaflet-popup-content-wrapper {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 12px;
+        }
+        .leaflet-popup-tip {
+            background: #1e293b;
+        }
+        .popup-content {
+            text-align: center;
+            padding: 10px;
+        }
+        .popup-content h3 {
+            margin: 0 0 10px 0;
+            color: #38bdf8;
+            font-family: 'Outfit', sans-serif;
+        }
+        .popup-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+            color: white !important;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        .popup-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Available Models</h1>
+    <header>
+        <h1>Solar Radiation Prediction for DK Region</h1>
+        <p class="subtitle">Select a city from the Dakshina Kannada region on the map below to launch the forecasting dashboard.</p>
+    </header>
 
-    <ul>
-        {% for model in models %}
-            <li>
-                <a href="/{{ model }}">{{ model | replace('_', ' ') | title }}</a>
-            </li>
-        {% endfor %}
-    </ul>
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map', {
+            center: [12.87, 75.12],
+            zoom: 10,
+            minZoom: 9
+        });
+
+        // Dark theme map tiles for premium look
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        var cities = [
+            { name: "Mangaluru", lat: 12.9141, lng: 74.8560 },
+            { name: "Puttur", lat: 12.7668, lng: 75.2016 },
+            { name: "Sullia", lat: 12.5593, lng: 75.3907 },
+            { name: "Bantwal", lat: 12.8890, lng: 75.0346 },
+            { name: "Belthangady", lat: 12.9866, lng: 75.2755 },
+            { name: "Moodabidri", lat: 13.0655, lng: 74.9963 }
+        ];
+
+        // Ensure models are available
+        const modelUrl = "/solar_lstm";
+
+        cities.forEach(function(city) {
+            var marker = L.marker([city.lat, city.lng]).addTo(map);
+            var popupHtml = `
+                <div class="popup-content">
+                    <h3>${city.name}</h3>
+                    <p>Dakshina Kannada</p>
+                    <a href="${modelUrl}?city=${encodeURIComponent(city.name)}" class="popup-btn">Predict Radiation</a>
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+        });
+    </script>
 </body>
 </html>

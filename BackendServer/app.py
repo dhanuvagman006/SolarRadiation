@@ -123,9 +123,12 @@ def predict(model_name):
 
     plot_files = [f for f in os.listdir(config["plots_dir"]) if f.endswith(".png")] if os.path.exists(config["plots_dir"]) else []
 
+    city = request.args.get("city", "Dakshina Kannada Region")
+
     return render_template(
         "predict.html", model_name=model_name, features=config["features"],
-        time_steps=config["time_steps"], prediction=prediction, error=error, plot_files=plot_files
+        time_steps=config["time_steps"], prediction=prediction, error=error, plot_files=plot_files,
+        city=city
     )
 
 @app.route("/plots/<model_name>/<filename>")
