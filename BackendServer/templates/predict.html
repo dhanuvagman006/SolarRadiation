@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Radiation Predictor</title>
+    <meta name="description" content="Predict future solar radiation based on past meteorology data using a state-of-the-art LSTM model.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.5);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px var(--accent-glow);
+        }
+        p.subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .btn {
+            background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.5);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+            border: 1px solid var(--border-color);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .day-block {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            transition: transform 0.3s ease;
+        }
+        .day-block:hover {
+            transform: scale(1.01);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+        .day-block h3 {
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+            color: #cbd5e1;
+            font-weight: 300;
+        }
+        .input-group input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            transition: border-color 0.3s ease;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .prediction-box {
+            margin-top: 40px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.2) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            overflow-x: auto;
+        }
+        .prediction-box h2 {
+            color: #34d399;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            min-width: 600px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        th {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            font-weight: 600;
+        }
+        td {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #fff;
+        }
+        .error {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            margin-top: 20px;
+            text-align: center;
+        }
+        .plots-section {
+            margin-top: 50px;
+        }
+        .plots-section h2 {
+            text-align: center;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+        }
+        .plots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .plots-grid img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease;
+        }
+        .plots-grid img:hover {
+            transform: scale(1.03);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 id="main-heading">{{ model_name }} Predictor</h1>
+    <p class="subtitle">Forecast the next 7 days of solar radiation using advanced deep learning.</p>
+
+    <div class="container">
+        <div style="text-align: right; margin-bottom: 20px;">
+            <button type="button" class="btn btn-secondary" onclick="loadSampleData()">Auto-Fill Sample Data</button>
+        </div>
+
+        <form method="POST">
+            {% for i in range(time_steps) %}
+                <div class="day-block">
+                    <h3>Day {{ i + 1 }}</h3>
+                    <div class="grid">
+                        {% for feature in features %}
+                            <div class="input-group">
+                                <label for="{{ feature }}_{{ i }}">{{ feature }}</label>
+                                <input type="number" step="any" id="{{ feature }}_{{ i }}" name="{{ feature }}_{{ i }}" required>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button type="submit" class="btn" style="font-size: 1.2rem; padding: 15px 40px;">Generate 7-Day Forecast</button>
+            </div>
+        </form>
+
+        {% if prediction %}
+            <div class="prediction-box">
+                <h2>Predicted Solar Radiation (Next 7 Days)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            {% for i in range(prediction|length) %}
+                                <th>Day {{ i + 1 }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            {% for p in prediction %}
+                                <td>{{ p }}</td>
+                            {% endfor %}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {% if error %}
+            <div class="error">
+                <strong>Error:</strong> {{ error }}
+            </div>
+        {% endif %}
+
+        {% if plot_files %}
+            <div class="plots-section">
+                <h2>Model Analytics & Performance</h2>
+                <div class="plots-grid">
+                    {% for plot in plot_files %}
+                        <img src="/plots/{{ model_name }}/{{ plot }}" alt="Model Performance Plot">
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+<script>
+function loadSampleData() {
+    const sampleFeatures = ["T2M", "RH2M", "WS2M", "CLOUD_AMT", "PRECTOTCORR", "day", "month", "year"];
+    const baseData = [25.0, 75.0, 2.0, 40.0, 0.5, 1, 1, 2015];
+    
+    for(let i=0; i<{{ time_steps }}; i++) {
+        for(let j=0; j<sampleFeatures.length; j++) {
+            const input = document.getElementById(sampleFeatures[j] + "_" + i);
+            if(input) {
+                let val = baseData[j] + (Math.random() * 2 - 1);
+                if (sampleFeatures[j] === "day") val = i + 1;
+                if (sampleFeatures[j] === "month") val = 1;
+                if (sampleFeatures[j] === "year") val = 2015;
+                if (sampleFeatures[j] === "CLOUD_AMT") val = Math.max(0, val);
+                if (sampleFeatures[j] === "PRECTOTCORR") val = Math.max(0, val);
+                
+                input.value = val.toFixed(2);
+            }
+        }
+    }
+}
+</script>
+
+</body>
+</html>

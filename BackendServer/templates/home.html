@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Solar Models</title>
+</head>
+<body>
+
+    <h1>Available Models</h1>
+
+    <ul>
+        {% for model in models %}
+            <li>
+                <a href="/{{ model }}">{{ model }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>
