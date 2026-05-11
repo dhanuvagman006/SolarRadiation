@@ -123,12 +123,19 @@ def predict(model_name):
 
     plot_files = [f for f in os.listdir(config["plots_dir"]) if f.endswith(".png")] if os.path.exists(config["plots_dir"]) else []
 
+    metrics = {}
+    metrics_path = os.path.join(BASE_DIR, "BackendServer", "metrics.json")
+    if os.path.exists(metrics_path):
+        import json
+        with open(metrics_path, "r") as f:
+            metrics = json.load(f)
+
     city = request.args.get("city", "Dakshina Kannada Region")
 
     return render_template(
-        "predict.html", model_name=model_name, features=config["features"],
+        "predict.html", model_name=model_name, available_models=list(MODELS_CONFIG.keys()), features=config["features"],
         time_steps=config["time_steps"], prediction=prediction, error=error, plot_files=plot_files,
-        city=city
+        city=city, metrics=metrics
     )
 
 @app.route("/plots/<model_name>/<filename>")

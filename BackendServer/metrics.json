@@ -1,0 +1,50 @@
+{
+    "solar_lstm": {
+        "MAE": 0.9355,
+        "RMSE": 1.2112,
+        "R2": 0.3199,
+        "MAPE": 0.3143,
+        "Accuracy": 68.57,
+        "NSE": 0.3199
+    },
+    "solar_gru": {
+        "MAE": 0.932,
+        "RMSE": 1.2354,
+        "R2": 0.2925,
+        "MAPE": 0.3272,
+        "Accuracy": 67.28,
+        "NSE": 0.2925
+    },
+    "solar_bidirectional_lstm": {
+        "MAE": 0.973,
+        "RMSE": 1.2633,
+        "R2": 0.2602,
+        "MAPE": 0.3346,
+        "Accuracy": 66.54,
+        "NSE": 0.2602
+    },
+    "solar_cnn_lstm": {
+        "MAE": 0.9903,
+        "RMSE": 1.2737,
+        "R2": 0.248,
+        "MAPE": 0.3376,
+        "Accuracy": 66.24,
+        "NSE": 0.248
+    },
+    "solar_stacked_lstm": {
+        "MAE": 0.9445,
+        "RMSE": 1.2599,
+        "R2": 0.2642,
+        "MAPE": 0.3367,
+        "Accuracy": 66.33,
+        "NSE": 0.2642
+    },
+    "solar_attention_lstm": {
+        "MAE": 0.9917,
+        "RMSE": 1.2551,
+        "R2": 0.2697,
+        "MAPE": 0.3309,
+        "Accuracy": 66.91,
+        "NSE": 0.2697
+    }
+}

@@ -215,7 +215,19 @@
     <p class="subtitle">Forecast the next 7 days of solar radiation for <strong>{{ city }}</strong> using advanced deep learning.</p>
 
     <div class="container">
-        <div style="text-align: right; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div class="model-selector" style="display: flex; align-items: center; gap: 10px;">
+                <label for="modelSelect" style="color: #cbd5e1; font-weight: 600;">Select Model:</label>
+                <select id="modelSelect" class="btn btn-secondary" style="padding: 10px 15px; border-radius: 8px; color: white; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); outline: none; cursor: pointer; font-family: 'Outfit', sans-serif;" onchange="window.location.href='/' + this.value + '?city={{ city }}'">
+                    {% if available_models %}
+                        {% for m in available_models %}
+                            <option value="{{ m }}" style="background: #0f172a; color: white;" {% if m == model_name %}selected{% endif %}>{{ m | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="{{ model_name }}" style="background: #0f172a; color: white;" selected>{{ model_name | replace('_', ' ') | title }}</option>
+                    {% endif %}
+                </select>
+            </div>
             <button type="button" class="btn btn-secondary" onclick="loadSampleData()">Auto-Fill Sample Data</button>
         </div>
 
@@ -348,6 +360,40 @@
                     {% for plot in plot_files %}
                         <img src="/plots/{{ model_name }}/{{ plot }}" alt="Model Performance Plot">
                     {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if metrics %}
+            <div class="metrics-section" style="margin-top: 50px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(76, 29, 149, 0.1) 100%); padding: 30px; border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);">
+                <h2 style="text-align: center; color: #a78bfa; margin-top: 0; margin-bottom: 25px;">Model Comparison Metrics</h2>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 800px; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: rgba(139, 92, 246, 0.2); color: #ddd6fe;">
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; font-weight: 600;">Model</th>
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">Accuracy (%)</th>
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">R² Score</th>
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">MAE</th>
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">RMSE</th>
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">NSE</th>
+                                <th style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">MAPE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m_name, m_data in metrics.items() %}
+                                <tr style="{% if m_name == model_name %}background: rgba(56, 189, 248, 0.15); border-left: 4px solid #38bdf8;{% else %}border-left: 4px solid transparent;{% endif %} transition: background 0.3s ease;">
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; text-align: left; color: {% if m_name == model_name %}#38bdf8{% else %}#fff{% endif %};">{{ m_name | replace('_', ' ') | title }}</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">{{ m_data['Accuracy'] }}</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">{{ m_data['R2'] }}</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">{{ m_data['MAE'] }}</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">{{ m_data['RMSE'] }}</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">{{ m_data['NSE'] }}</td>
+                                    <td style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">{{ m_data['MAPE'] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         {% endif %}
