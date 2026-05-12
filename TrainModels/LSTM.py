@@ -54,11 +54,10 @@ def main():
         Dense(future_steps)
     ])
     model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
     history = model.fit(
-        x_train, y_train, epochs=50, batch_size=32,
-        validation_split=0.2, callbacks=[early_stop]
+        x_train, y_train, epochs=300, batch_size=32,
+        validation_split=0.2
     )
 
     model.save(model_save_path)

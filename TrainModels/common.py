@@ -132,7 +132,7 @@ def save_plots(model_name, history, y_true, y_pred, output_dir):
     plt.close()
 
 
-def train_model(base_dir, model_name, build_model_fn, data_path, epochs=100, batch_size=32, patience=10):
+def train_model(base_dir, model_name, build_model_fn, data_path, epochs=300, batch_size=32, patience=10):
     set_seed()
     df = load_dataset(data_path)
     train_end, val_end = split_boundaries(len(df))
@@ -160,13 +160,6 @@ def train_model(base_dir, model_name, build_model_fn, data_path, epochs=100, bat
         epochs=epochs,
         batch_size=batch_size,
         shuffle=False,
-        callbacks=[
-            tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss",
-                patience=patience,
-                restore_best_weights=True,
-            )
-        ],
         verbose=1,
     )
 
