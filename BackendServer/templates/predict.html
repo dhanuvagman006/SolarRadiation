@@ -1,525 +1,712 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar Radiation Predictor</title>
-    <meta name="description"
-        content="Predict future solar radiation based on past meteorology data using a state-of-the-art LSTM model.">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <title>Solar Radiation Result</title>
+    <meta name="description" content="Solar radiation prediction dashboard for the Dakshina Kannada region.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --text-color: #f8fafc;
-            --accent-color: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.5);
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --border-color: rgba(255, 255, 255, 0.1);
+            --bg-0: #07111f;
+            --bg-1: #0c1a2d;
+            --panel: rgba(10, 20, 34, 0.78);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #edf6ff;
+            --muted: #9bb0c7;
+            --accent: #48bfe3;
+            --accent-2: #7cdbb4;
+            --warn: #fb7185;
+            --shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
         }
 
+        * { box-sizing: border-box; }
+
         body {
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            color: var(--text-color);
             margin: 0;
-            padding: 40px 20px;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(72, 191, 227, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(124, 219, 180, 0.12), transparent 26%),
+                linear-gradient(135deg, var(--bg-0), var(--bg-1));
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 32px 32px;
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 85%);
+        }
+
+        .page {
+            width: min(1280px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 48px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            display: grid;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .eyebrow {
+            color: var(--accent-2);
+            text-transform: uppercase;
+            letter-spacing: 0.22em;
+            font-size: 0.78rem;
+            font-weight: 700;
         }
 
         h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px var(--accent-glow);
+            margin: 0;
+            font-size: clamp(2.2rem, 4vw, 4.4rem);
+            line-height: 0.98;
+            letter-spacing: -0.04em;
         }
 
-        p.subtitle {
-            text-align: center;
-            color: #94a3b8;
-            font-size: 1.1rem;
-            margin-bottom: 40px;
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            max-width: 72ch;
+            font-size: 1.02rem;
         }
 
-        .container {
+        .hero-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .chip {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .shell {
+            display: grid;
+            gap: 20px;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .panel-title {
+            margin: 0;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .panel-note {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .toolbar {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #d7e4f1;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .field input,
+        .field select {
             width: 100%;
-            max-width: 1000px;
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            padding: 13px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            outline: none;
+            color: var(--text);
+            background: rgba(4, 12, 22, 0.68);
+            font: inherit;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            border-color: rgba(72, 191, 227, 0.8);
+            box-shadow: 0 0 0 3px rgba(72, 191, 227, 0.16);
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .meta-card {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+        }
+
+        .meta-label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .meta-value {
+            margin-top: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .input-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
         }
 
         .btn {
-            background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            border: 0;
+            border-radius: 14px;
+            padding: 13px 18px;
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+            background: linear-gradient(135deg, #49bfe4, #2f7ef0);
+            box-shadow: 0 18px 30px rgba(47, 126, 240, 0.22);
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.5);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
+        .btn.secondary {
+            background: rgba(255, 255, 255, 0.08);
             box-shadow: none;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border);
         }
 
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
+        .btn:hover { transform: translateY(-1px); }
 
-        .day-block {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--border-color);
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            transition: transform 0.3s ease;
-        }
-
-        .day-block:hover {
-            transform: scale(1.01);
-            border-color: rgba(56, 189, 248, 0.3);
-        }
-
-        .day-block h3 {
-            margin-top: 0;
-            color: var(--accent-color);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-
-        .grid {
+        .steps {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
+            gap: 14px;
         }
 
-        .input-group label {
-            display: block;
-            font-size: 0.85em;
-            margin-bottom: 5px;
-            color: #cbd5e1;
-            font-weight: 300;
+        .step-card {
+            border-radius: 20px;
+            padding: 16px;
+            background: rgba(4, 12, 22, 0.62);
+            border: 1px solid var(--border);
         }
 
-        .input-group input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: white;
-            font-family: 'Outfit', sans-serif;
-            transition: border-color 0.3s ease;
+        .step-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 10px var(--accent-glow);
+        .step-title { margin: 0; font-size: 1rem; }
+        .step-subtitle { color: var(--muted); font-size: 0.88rem; }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
         }
 
-        .prediction-box {
-            margin-top: 40px;
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.2) 100%);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 16px;
-            padding: 30px;
-            text-align: center;
+        .feature-grid .field input { padding: 12px 13px; }
+
+        .footer-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 18px;
+        }
+
+        .result-table-wrap {
             overflow-x: auto;
-        }
-
-        .prediction-box h2 {
-            color: #34d399;
-            margin-top: 0;
-            margin-bottom: 20px;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: rgba(4, 12, 22, 0.52);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            overflow: hidden;
-            min-width: 600px;
+            min-width: 720px;
         }
 
         th,
         td {
-            padding: 15px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: left;
         }
 
         th {
-            background: rgba(16, 185, 129, 0.2);
-            color: #6ee7b7;
-            font-weight: 600;
+            color: #cfefff;
+            background: rgba(72, 191, 227, 0.12);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
-        td {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #fff;
+        .value {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .energy-card { display: grid; gap: 12px; }
+
+        .summary-box {
+            padding: 16px;
+            border-radius: 18px;
+            background: rgba(72, 191, 227, 0.08);
+            border: 1px solid rgba(72, 191, 227, 0.25);
+        }
+
+        .summary-box strong {
+            display: block;
+            margin-bottom: 6px;
         }
 
         .error {
-            color: #f87171;
-            background: rgba(239, 68, 68, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .plots-section {
-            margin-top: 50px;
-        }
-
-        .plots-section h2 {
-            text-align: center;
-            color: var(--accent-color);
-            margin-bottom: 30px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            color: #ffd3da;
+            background: rgba(251, 113, 133, 0.08);
+            border: 1px solid rgba(251, 113, 133, 0.28);
         }
 
         .plots-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
         }
 
         .plots-grid img {
             width: 100%;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            transition: transform 0.3s ease;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: rgba(4, 12, 22, 0.4);
         }
 
-        .plots-grid img:hover {
-            transform: scale(1.03);
-            z-index: 10;
+        .metric-table-wrap {
+            overflow-x: auto;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: rgba(4, 12, 22, 0.52);
         }
 
-        .calculator-box {
-            margin-top: 40px;
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.05) 0%, rgba(30, 64, 175, 0.1) 100%);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        @media (max-width: 1080px) {
+            .toolbar,
+            .meta-grid,
+            .feature-grid,
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .calculator-box h2 {
-            color: #38bdf8;
-            margin-top: 0;
-            margin-bottom: 10px;
-            text-align: center;
+        @media (max-width: 720px) {
+            .page {
+                width: min(100% - 18px, 1280px);
+                padding-top: 14px;
+            }
+
+            .panel {
+                padding: 16px;
+                border-radius: 20px;
+            }
         }
     </style>
 </head>
-
 <body>
-
-    <h1 id="main-heading">{{ model_name | replace('_', ' ') | title }} Predictor</h1>
-    <p class="subtitle">Forecast the next 7 days of solar radiation for <strong>{{ city }}</strong> using advanced deep
-        learning.</p>
-
-    <div class="container">
-        <div
-            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-            <div class="model-selector" style="display: flex; align-items: center; gap: 10px;">
-                <label for="modelSelect" style="color: #cbd5e1; font-weight: 600;">Select Model:</label>
-                <select id="modelSelect" class="btn btn-secondary"
-                    style="padding: 10px 15px; border-radius: 8px; color: white; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); outline: none; cursor: pointer; font-family: 'Outfit', sans-serif;"
-                    onchange="window.location.href='/' + this.value + '?city={{ city }}'">
-                    {% if available_models %}
-                    {% for m in available_models %}
-                    <option value="{{ m }}" style="background: #0f172a; color: white;" {% if m==model_name %}selected{%
-                        endif %}>{{ m | replace('_', ' ') | title }}</option>
-                    {% endfor %}
-                    {% else %}
-                    <option value="{{ model_name }}" style="background: #0f172a; color: white;" selected>{{ model_name |
-                        replace('_', ' ') | title }}</option>
-                    {% endif %}
-                </select>
+    <div class="page">
+        <div class="hero">
+            <div class="eyebrow">Result in HTML form</div>
+            <h1>{{ model_name | replace('_', ' ') | title }} Forecast Dashboard</h1>
+            <p class="subtitle">Choose the location and forecast horizon, enter the past weather sequence, and generate a solar radiation result page with a day-by-day table and sizing calculator.</p>
+            <div class="hero-strip">
+                <span class="chip">Location: {{ selected_city }}</span>
+                <span class="chip">Duration: {{ duration_options[selected_duration] if selected_duration in duration_options else 7 }} days</span>
+                <span class="chip">Model: {{ model_name | replace('_', ' ') | title }}</span>
             </div>
-            <button type="button" class="btn btn-secondary" onclick="loadSampleData()">Auto-Fill Sample Data</button>
         </div>
 
-        <form method="POST">
-            {% for i in range(time_steps) %}
-            <div class="day-block">
-                <h3>Day {{ i + 1 }}</h3>
-                <div class="grid">
-                    {% for feature in features %}
-                    <div class="input-group">
-                        <label for="{{ feature }}_{{ i }}">{{ feature }}</label>
-                        <input type="number" step="any" id="{{ feature }}_{{ i }}" name="{{ feature }}_{{ i }}"
-                            required>
+        <div class="shell">
+            <form method="POST" class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Prediction Controls</h2>
+                        <div class="panel-note">Step 1 and 2 from your sketch: select location and duration first.</div>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap: wrap;">
+                        <select id="modelSelect" class="btn secondary" onchange="switchModel(this.value)">
+                            {% for m in available_models %}
+                            <option value="{{ m }}" {% if m == model_name %}selected{% endif %}>{{ m | replace('_', ' ') | title }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn secondary" onclick="loadSampleData()">Auto Fill Sample Data</button>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="field">
+                        <label for="city">Select Location</label>
+                        <select id="city" name="city">
+                            {% for location in locations %}
+                            <option value="{{ location }}" {% if location == selected_city %}selected{% endif %}>{{ location }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="duration">Select Duration</label>
+                        <select id="duration" name="duration">
+                            {% for duration_key, duration_days in duration_options.items() %}
+                            <option value="{{ duration_key }}" {% if duration_key == selected_duration %}selected{% endif %}>{{ duration_days }} Day{% if duration_days != 1 %}s{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="start_date">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" value="{{ selected_start_date }}">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn" style="width:100%;">Generate Forecast</button>
+                    </div>
+                </div>
+
+                <div class="meta-grid">
+                    <div class="meta-card">
+                        <div class="meta-label">Location</div>
+                        <div class="meta-value">{{ selected_city }}</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Forecast Horizon</div>
+                        <div class="meta-value">{{ duration_options[selected_duration] if selected_duration in duration_options else 7 }} days</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Current Model Accuracy</div>
+                        <div class="meta-value">{{ metrics.get(model_name, {}).get('Accuracy', 'N/A') }}%</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Start Date</div>
+                        <div class="meta-value">{{ selected_start_date }}</div>
+                    </div>
+                </div>
+
+                <div class="input-toolbar">
+                    <div>
+                        <h3 class="panel-title" style="margin-bottom:4px;">Solar Prediction Inputs</h3>
+                        <div class="panel-note">Enter the historical weather values for each day in the 7-step sequence.</div>
+                    </div>
+                    <div class="panel-note">Features: {{ features | join(', ') }}</div>
+                </div>
+
+                <div class="steps">
+                    {% for i in range(time_steps) %}
+                    <div class="step-card">
+                        <div class="step-head">
+                            <h3 class="step-title">Day {{ i + 1 }}</h3>
+                            <div class="step-subtitle">Past sequence input</div>
+                        </div>
+                        <div class="feature-grid">
+                            {% for feature in features %}
+                            <div class="field">
+                                <label for="{{ feature }}_{{ i }}">{{ feature }}</label>
+                                <input type="number" step="any" id="{{ feature }}_{{ i }}" name="{{ feature }}_{{ i }}" value="{{ form_data.get(feature ~ '_' ~ i, '') }}" required>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
-            </div>
-            {% endfor %}
 
-            <div style="text-align: center; margin-top: 30px;">
-                <button type="submit" class="btn" style="font-size: 1.2rem; padding: 15px 40px;">Generate 7-Day
-                    Forecast</button>
-            </div>
-        </form>
+                <div class="footer-actions">
+                    <button type="submit" class="btn">Generate Result Page</button>
+                </div>
+            </form>
 
-        {% if prediction %}
-        <div class="prediction-box">
-            <h2>Predicted Solar Radiation (Next 7 Days)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        {% for i in range(prediction|length) %}
-                        <th>Day {{ i + 1 }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        {% for p in prediction %}
-                        <td>{{ p }}</td>
-                        {% endfor %}
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            {% if error %}
+            <div class="error"><strong>Error:</strong> {{ error }}</div>
+            {% endif %}
 
-        <div class="calculator-box">
-            <h2 style="font-size: 2.2rem; margin-bottom: 30px;">Power Prediction & Sizing</h2>
-
-            <div style="padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2);">
-                <div style="position: relative; border: 1px dashed rgba(56, 189, 248, 0.5); padding: 25px 20px 20px 20px; border-radius: 8px; margin-bottom: 30px; margin-top: 20px;">
-                    <span style="position: absolute; top: -12px; left: 20px; background: #0f172a; padding: 0 10px; color: #38bdf8; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; border-radius: 4px;">Manual enter</span>
-                    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
-                        <div class="input-group">
-                            <label for="sys_size">System Size (kW)</label>
-                            <input type="number" id="sys_size" value="5" step="0.5" min="0.5">
-                        </div>
-                        <div class="input-group">
-                            <label for="sys_panel_wattage">Panel Wattage (W)</label>
-                            <input type="number" id="sys_panel_wattage" value="400" step="10" min="50">
-                        </div>
-                        <div class="input-group">
-                            <label for="sys_panel_efficiency">Panel Efficiency (%)</label>
-                            <input type="number" id="sys_panel_efficiency" value="20" step="0.1" min="1" max="100">
-                        </div>
+            {% if display_prediction %}
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Predicted Solar Radiation</h2>
+                        <div class="panel-note">Table view for the selected duration. Forecast dates are generated from the selected start date.</div>
                     </div>
+                    <div class="chip">{{ display_prediction | length }} day output</div>
                 </div>
 
-                <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; flex-wrap: wrap;">
-                    <div class="input-group" style="width: 160px; text-align: center;">
-                        <label style="color: #94a3b8; margin-bottom: 8px; font-size: 0.95rem;">No. of Panels</label>
-                        <div id="res_panels" style="padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 1.5rem; font-weight: 800; min-height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">-</div>
-                    </div>
-                    <div class="input-group" style="width: 160px; text-align: center;">
-                        <label style="color: #94a3b8; margin-bottom: 8px; font-size: 0.95rem;">Total area reqd.</label>
-                        <div id="res_area" style="padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 1.5rem; font-weight: 800; min-height: 50px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">-</div>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-bottom: 40px;">
-                    <button type="button" class="btn" style="padding: 15px 40px; font-size: 1.1rem; border-radius: 30px; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4);" onclick="calculateAll()">Calculate power prediction</button>
-                </div>
-
-                <div id="power_result" style="display: none; background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                    <h3 style="color: #34d399; text-align: center; margin-top: 0; margin-bottom: 20px; font-size: 1.3rem;">Estimated power Generation</h3>
-                    <div style="overflow-x: auto;">
-                        <table style="min-width: 600px; margin: 0;">
+                <div class="result-grid">
+                    <div class="result-table-wrap">
+                        <table>
                             <thead>
                                 <tr>
-                                    {% for i in range(prediction|length) %}
-                                    <th style="background: transparent; color: #6ee7b7; border-bottom: 2px solid rgba(16, 185, 129, 0.3);">Day {{ i + 1 }}</th>
-                                    {% endfor %}
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th>Solar Radiation</th>
                                 </tr>
                             </thead>
-                            <tbody id="power_table_body">
-                                <!-- Filled via JS -->
+                            <tbody>
+                                {% for value in display_prediction %}
+                                <tr>
+                                    <td>{{ forecast_dates[loop.index0] }}</td>
+                                    <td>Day {{ loop.index }}</td>
+                                    <td class="value">{{ value }}</td>
+                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
+
+                    <div class="energy-card">
+                        <div class="summary-box">
+                            <strong>Quick summary</strong>
+                            Average radiation: {{ "%.4f" | format(display_prediction | sum / (display_prediction | length)) if display_prediction else "0.0000" }}
+                        </div>
+                        <div class="summary-box">
+                            <strong>Selected location</strong>
+                            {{ selected_city }}
+                        </div>
+                        <div class="summary-box">
+                            <strong>Forecast window</strong>
+                            {{ selected_start_date }} to {{ forecast_dates[-1] if forecast_dates else selected_start_date }}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Power Prediction and Sizing</h2>
+                        <div class="panel-note">Manual system inputs with automatic panel and area calculation.</div>
+                    </div>
+                    <div class="chip">Auto calculation enabled</div>
+                </div>
+
+                <div class="toolbar" style="grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 0;">
+                    <div class="field">
+                        <label for="sys_size">Solar System (kW)</label>
+                        <input type="number" id="sys_size" value="5" step="0.5" min="0.5">
+                    </div>
+                    <div class="field">
+                        <label for="sys_panel_wattage">Panel Wattage (W)</label>
+                        <input type="number" id="sys_panel_wattage" value="400" step="10" min="50">
+                    </div>
+                    <div class="field">
+                        <label for="sys_panel_efficiency">Panel Efficiency (%)</label>
+                        <input type="number" id="sys_panel_efficiency" value="20" step="0.1" min="1" max="100">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn secondary" onclick="calculateAll()" style="width:100%;">Generate Actual Energy</button>
+                    </div>
+                </div>
+
+                <div class="meta-grid" style="margin-top:16px;">
+                    <div class="meta-card">
+                        <div class="meta-label">No. of panels needed</div>
+                        <div class="meta-value" id="res_panels">-</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="meta-label">Panel area (m²)</div>
+                        <div class="meta-value" id="res_area">-</div>
+                    </div>
+                    <div class="meta-card" style="grid-column: span 2;">
+                        <div class="meta-label">How it works</div>
+                        <div class="meta-value" style="font-size:0.98rem; font-weight:500; color: var(--muted);">The calculator multiplies the forecast radiation by the computed installation area and efficiency to estimate daily generation.</div>
+                    </div>
+                </div>
+
+                <div id="power_result" class="result-table-wrap" style="display:none; margin-top:16px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Forecast Radiation</th>
+                                <th>Estimated Energy (kWh)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="power_table_body"></tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if plot_files %}
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Model Analytics and Performance</h2>
+                        <div class="panel-note">Saved plots for the selected model.</div>
+                    </div>
+                </div>
+                <div class="plots-grid">
+                    {% for plot in plot_files %}
+                    <img src="/plots/{{ model_name }}/{{ plot }}" alt="Model performance plot">
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% if metrics %}
+            <section class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Model Comparison Metrics</h2>
+                        <div class="panel-note">Accuracy, error, and efficiency metrics across the trained models.</div>
+                    </div>
+                </div>
+                <div class="metric-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Accuracy (%)</th>
+                                <th>R² Score</th>
+                                <th>MAE</th>
+                                <th>RMSE</th>
+                                <th>NSE</th>
+                                <th>MAPE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m_name, m_data in metrics.items() %}
+                            <tr style="{% if m_name == model_name %}background: rgba(72, 191, 227, 0.1);{% endif %}">
+                                <td class="value">{{ m_name | replace('_', ' ') | title }}</td>
+                                <td>{{ m_data['Accuracy'] }}</td>
+                                <td>{{ m_data['R2'] }}</td>
+                                <td>{{ m_data['MAE'] }}</td>
+                                <td>{{ m_data['RMSE'] }}</td>
+                                <td>{{ m_data['NSE'] }}</td>
+                                <td>{{ m_data['MAPE'] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
         </div>
-
-        <script>
-            const predictions = {{ prediction }};
-            
-            function calculateAll() {
-                const sysSizeKW = parseFloat(document.getElementById('sys_size').value);
-                const panelWattage = parseFloat(document.getElementById('sys_panel_wattage').value);
-                const panelEfficiency = parseFloat(document.getElementById('sys_panel_efficiency').value) / 100;
-
-                if (isNaN(sysSizeKW) || isNaN(panelWattage) || isNaN(panelEfficiency)) {
-                    alert("Please enter valid numbers for all fields.");
-                    return;
-                }
-
-                // Sizing Calculation
-                const sysSizeW = sysSizeKW * 1000;
-                const panelsRequired = Math.ceil(sysSizeW / panelWattage);
-                const areaPerPanel = panelWattage / (1000 * panelEfficiency);
-                const totalArea = panelsRequired * areaPerPanel;
-
-                document.getElementById('res_panels').innerText = panelsRequired;
-                document.getElementById('res_area').innerText = totalArea.toFixed(2) + " m²";
-
-                // Power Calculation
-                const pr = 0.75; // Default performance ratio for real world estimation
-                const tbody = document.getElementById('power_table_body');
-                tbody.innerHTML = '';
-                let tr = document.createElement('tr');
-
-                predictions.forEach(radiation => {
-                    // Energy (kWh) = Area * Radiation * Efficiency * PR
-                    const power = totalArea * radiation * panelEfficiency * pr;
-                    let td = document.createElement('td');
-                    td.style.borderBottom = "none";
-                    td.innerHTML = `<span style="font-size: 1.4rem; font-weight: 800; color: #fff;">${power.toFixed(2)}</span><br><span style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">kWh</span>`;
-                    tr.appendChild(td);
-                });
-
-                tbody.appendChild(tr);
-                document.getElementById('power_result').style.display = 'block';
-            }
-        </script>
-        {% endif %}
-
-        {% if error %}
-        <div class="error">
-            <strong>Error:</strong> {{ error }}
-        </div>
-        {% endif %}
-
-        {% if plot_files %}
-        <div class="plots-section">
-            <h2>Model Analytics & Performance</h2>
-            <div class="plots-grid">
-                {% for plot in plot_files %}
-                <img src="/plots/{{ model_name }}/{{ plot }}" alt="Model Performance Plot">
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        {% if metrics %}
-        <div class="metrics-section"
-            style="margin-top: 50px; background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(76, 29, 149, 0.1) 100%); padding: 30px; border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);">
-            <h2 style="text-align: center; color: #a78bfa; margin-top: 0; margin-bottom: 25px;">Model Comparison Metrics
-            </h2>
-            <div style="overflow-x: auto;">
-                <table
-                    style="width: 100%; border-collapse: collapse; min-width: 800px; background: rgba(0,0,0,0.3); border-radius: 8px; overflow: hidden;">
-                    <thead>
-                        <tr style="background: rgba(139, 92, 246, 0.2); color: #ddd6fe;">
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left; font-weight: 600;">
-                                Model</th>
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">
-                                Accuracy (%)</th>
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">
-                                R² Score</th>
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">
-                                MAE</th>
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">
-                                RMSE</th>
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">
-                                NSE</th>
-                            <th
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600;">
-                                MAPE</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m_name, m_data in metrics.items() %}
-                        <tr
-                            style="{% if m_name == model_name %}background: rgba(56, 189, 248, 0.15); border-left: 4px solid #38bdf8;{% else %}border-left: 4px solid transparent;{% endif %} transition: background 0.3s ease;">
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 600; text-align: left; color: {% if m_name == model_name %}#38bdf8{% else %}#fff{% endif %};">
-                                {{ m_name | replace('_', ' ') | title }}</td>
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">
-                                {{ m_data['Accuracy'] }}</td>
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">
-                                {{ m_data['R2'] }}</td>
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">
-                                {{ m_data['MAE'] }}</td>
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">
-                                {{ m_data['RMSE'] }}</td>
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">
-                                {{ m_data['NSE'] }}</td>
-                            <td
-                                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; color: #fff; font-size: 1.1rem;">
-                                {{ m_data['MAPE'] }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
     <script>
+        const forecastValues = {{ display_prediction | tojson }};
+        const forecastDates = {{ forecast_dates | tojson }};
+
+        function switchModel(modelName) {
+            const city = document.getElementById('city').value;
+            const duration = document.getElementById('duration').value;
+            const startDate = document.getElementById('start_date').value;
+            window.location.href = '/' + modelName + '?city=' + encodeURIComponent(city) + '&duration=' + encodeURIComponent(duration) + '&start_date=' + encodeURIComponent(startDate);
+        }
+
         function loadSampleData() {
             const sampleFeatures = ["T2M", "RH2M", "WS2M", "CLOUD_AMT", "PRECTOTCORR", "day", "month", "year"];
             const baseData = [25.0, 75.0, 2.0, 40.0, 0.5, 1, 1, 2015];
 
             for (let i = 0; i < {{ time_steps }}; i++) {
-            for (let j = 0; j < sampleFeatures.length; j++) {
-                const input = document.getElementById(sampleFeatures[j] + "_" + i);
-                if (input) {
+                for (let j = 0; j < sampleFeatures.length; j++) {
+                    const input = document.getElementById(sampleFeatures[j] + '_' + i);
+                    if (!input) continue;
+
                     let val = baseData[j] + (Math.random() * 2 - 1);
-                    if (sampleFeatures[j] === "day") val = i + 1;
-                    if (sampleFeatures[j] === "month") val = 1;
-                    if (sampleFeatures[j] === "year") val = 2015;
-                    if (sampleFeatures[j] === "CLOUD_AMT") val = Math.max(0, val);
-                    if (sampleFeatures[j] === "PRECTOTCORR") val = Math.max(0, val);
+                    if (sampleFeatures[j] === 'day') val = i + 1;
+                    if (sampleFeatures[j] === 'month') val = 1;
+                    if (sampleFeatures[j] === 'year') val = 2015;
+                    if (sampleFeatures[j] === 'CLOUD_AMT' || sampleFeatures[j] === 'PRECTOTCORR') val = Math.max(0, val);
 
                     input.value = val.toFixed(2);
                 }
             }
         }
-}
+
+        function calculateAll() {
+            const sysSizeKW = parseFloat(document.getElementById('sys_size').value);
+            const panelWattage = parseFloat(document.getElementById('sys_panel_wattage').value);
+            const panelEfficiency = parseFloat(document.getElementById('sys_panel_efficiency').value) / 100;
+
+            if (isNaN(sysSizeKW) || isNaN(panelWattage) || isNaN(panelEfficiency)) {
+                alert('Please enter valid numbers for all fields.');
+                return;
+            }
+
+            if (!forecastValues.length) {
+                alert('Generate a forecast first.');
+                return;
+            }
+
+            const sysSizeW = sysSizeKW * 1000;
+            const panelsRequired = Math.ceil(sysSizeW / panelWattage);
+            const areaPerPanel = panelWattage / (1000 * panelEfficiency);
+            const totalArea = panelsRequired * areaPerPanel;
+
+            document.getElementById('res_panels').innerText = panelsRequired;
+            document.getElementById('res_area').innerText = totalArea.toFixed(2) + ' m²';
+
+            const pr = 0.75;
+            const tbody = document.getElementById('power_table_body');
+            tbody.innerHTML = '';
+
+            forecastValues.forEach((radiation, index) => {
+                const power = totalArea * radiation * panelEfficiency * pr;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${forecastDates[index] || ('Day ' + (index + 1))}</td>
+                    <td class="value">${radiation}</td>
+                    <td class="value">${power.toFixed(2)} kWh</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('power_result').style.display = 'block';
+        }
     </script>
-
 </body>
-
 </html>

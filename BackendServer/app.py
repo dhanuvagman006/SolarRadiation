@@ -1,4 +1,5 @@
 import os
+from datetime import date, timedelta
 import joblib
 import numpy as np
 from flask import Flask, render_template, request, send_from_directory, abort
@@ -8,6 +9,22 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__)
 
 FEATURES = ["T2M", "RH2M", "WS2M", "CLOUD_AMT", "PRECTOTCORR", "day", "month", "year"]
+
+LOCATIONS = [
+    "Mangaluru",
+    "Puttur",
+    "Sullia",
+    "Bantwal",
+    "Belthangady",
+    "Moodabidri",
+]
+
+DURATION_OPTIONS = {
+    "1d": 1,
+    "2d": 2,
+    "4d": 4,
+    "7d": 7,
+}
 
 MODELS_CONFIG = {
     "solar_lstm": {
@@ -97,6 +114,19 @@ def predict(model_name):
     config = MODELS_CONFIG[model_name]
     prediction = None
     error = None
+    selected_city = request.values.get("city", "Mangaluru")
+    selected_duration = request.values.get("duration", "7d")
+    selected_duration_days = DURATION_OPTIONS.get(selected_duration, 7)
+    selected_start_date = request.values.get("start_date", date.today().isoformat())
+
+    try:
+        parsed_start_date = date.fromisoformat(selected_start_date)
+    except ValueError:
+        parsed_start_date = date.today()
+        selected_start_date = parsed_start_date.isoformat()
+
+    display_prediction = []
+    forecast_dates = []
 
     if request.method == "POST":
         try:
@@ -121,6 +151,12 @@ def predict(model_name):
         except Exception as e:
             error = f"Prediction Error: {str(e)}"
 
+    display_prediction = prediction[:selected_duration_days] if prediction else []
+    forecast_dates = [
+        (parsed_start_date + timedelta(days=i)).strftime("%d %b %Y")
+        for i in range(len(display_prediction))
+    ]
+
     plot_files = [f for f in os.listdir(config["plots_dir"]) if f.endswith(".png")] if os.path.exists(config["plots_dir"]) else []
 
     metrics = {}
@@ -130,12 +166,27 @@ def predict(model_name):
         with open(metrics_path, "r") as f:
             metrics = json.load(f)
 
-    city = request.args.get("city", "Dakshina Kannada Region")
+    city = selected_city
 
     return render_template(
-        "predict.html", model_name=model_name, available_models=list(MODELS_CONFIG.keys()), features=config["features"],
-        time_steps=config["time_steps"], prediction=prediction, error=error, plot_files=plot_files,
-        city=city, metrics=metrics
+        "predict.html",
+        model_name=model_name,
+        available_models=list(MODELS_CONFIG.keys()),
+        features=config["features"],
+        time_steps=config["time_steps"],
+        prediction=prediction,
+        display_prediction=display_prediction,
+        forecast_dates=forecast_dates,
+        error=error,
+        plot_files=plot_files,
+        city=city,
+        selected_city=selected_city,
+        selected_duration=selected_duration,
+        selected_start_date=selected_start_date,
+        duration_options=DURATION_OPTIONS,
+        locations=LOCATIONS,
+        metrics=metrics,
+        form_data=request.form,
     )
 
 @app.route("/plots/<model_name>/<filename>")
