@@ -198,6 +198,32 @@
             margin-bottom: 14px;
         }
 
+        .input-toolbar .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .step-toggle {
+            min-width: 160px;
+        }
+
+        .steps-wrap {
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.28s ease, transform 0.28s ease;
+            max-height: 3200px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .steps-wrap.is-collapsed {
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+        }
+
         .btn {
             border: 0;
             border-radius: 14px;
@@ -441,10 +467,14 @@
                         <h3 class="panel-title" style="margin-bottom:4px;">Solar Prediction Inputs</h3>
                         <div class="panel-note">Enter the historical weather values for each day in the 7-step sequence.</div>
                     </div>
-                    <div class="panel-note">Features: {{ features | join(', ') }}</div>
+                    <div class="toolbar-actions">
+                        <div class="panel-note">Features: {{ features | join(', ') }}</div>
+                        <button type="button" class="btn secondary step-toggle" id="steps_toggle_btn" aria-expanded="true" aria-controls="steps_container">Hide inputs</button>
+                    </div>
                 </div>
 
-                <div class="steps">
+                <div class="steps-wrap" id="steps_container">
+                    <div class="steps">
                     {% for i in range(time_steps) %}
                     <div class="step-card">
                         <div class="step-head">
@@ -461,6 +491,7 @@
                         </div>
                     </div>
                     {% endfor %}
+                    </div>
                 </div>
 
                 <div class="footer-actions">
@@ -639,6 +670,23 @@
     <script>
         const forecastValues = {{ display_prediction | tojson }};
         const forecastDates = {{ forecast_dates | tojson }};
+        const stepsContainer = document.getElementById('steps_container');
+        const stepsToggleBtn = document.getElementById('steps_toggle_btn');
+
+        function setStepsVisibility(isVisible) {
+            if (!stepsContainer || !stepsToggleBtn) return;
+
+            stepsContainer.classList.toggle('is-collapsed', !isVisible);
+            stepsToggleBtn.setAttribute('aria-expanded', String(isVisible));
+            stepsToggleBtn.innerText = isVisible ? 'Hide inputs' : 'Show inputs';
+        }
+
+        if (stepsToggleBtn) {
+            stepsToggleBtn.addEventListener('click', function () {
+                const isVisible = !stepsContainer.classList.contains('is-collapsed');
+                setStepsVisibility(!isVisible);
+            });
+        }
 
         function switchModel(modelName) {
             const city = document.getElementById('city').value;
