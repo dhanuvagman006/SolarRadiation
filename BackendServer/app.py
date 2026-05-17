@@ -106,6 +106,10 @@ model_manager = ModelManager()
 def home():
     return render_template("home.html", models=MODELS_CONFIG.keys())
 
+@app.route("/docs")
+def docs():
+    return render_template("docs.html")
+
 @app.route("/<model_name>", methods=["GET", "POST"])
 def predict(model_name):
     if model_name not in MODELS_CONFIG:
