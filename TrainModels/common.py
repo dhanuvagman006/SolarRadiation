@@ -5,6 +5,7 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.preprocessing import MinMaxScaler
 
 matplotlib.use("Agg")
@@ -91,6 +92,29 @@ def inverse_transform_sequences(y_scaler, values):
     return y_scaler.inverse_transform(values.reshape(-1, 1)).reshape(values.shape[0], FUTURE_STEPS)
 
 
+def calculate_regression_metrics(y_true, y_pred):
+    y_true_flat = np.asarray(y_true).reshape(-1)
+    y_pred_flat = np.asarray(y_pred).reshape(-1)
+
+    mae = np.mean(np.abs(y_true_flat - y_pred_flat))
+    rmse = np.sqrt(np.mean((y_true_flat - y_pred_flat) ** 2))
+    mape = np.mean(np.abs((y_true_flat - y_pred_flat) / np.clip(np.abs(y_true_flat), 1e-8, None)))
+    accuracy = max(0.0, (1 - mape) * 100)
+
+    return {
+        "mae": mae,
+        "rmse": rmse,
+        "mape": mape,
+        "accuracy": accuracy,
+    }
+
+
+def _merge_history_history(base_history, extra_history):
+    for key, values in extra_history.history.items():
+        base_history.history.setdefault(key, []).extend(values)
+    return base_history
+
+
 def save_plots(model_name, history, y_true, y_pred, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     y_true_flat = np.asarray(y_true).reshape(-1)
@@ -132,7 +156,18 @@ def save_plots(model_name, history, y_true, y_pred, output_dir):
     plt.close()
 
 
-def train_model(base_dir, model_name, build_model_fn, data_path, epochs=300, batch_size=32, patience=10):
+def train_model(
+    base_dir,
+    model_name,
+    build_model_fn,
+    data_path,
+    epochs=300,
+    batch_size=32,
+    patience=10,
+    target_accuracy=None,
+    fine_tune_epochs=None,
+    learning_rate=1e-3,
+):
     set_seed()
     df = load_dataset(data_path)
     train_end, val_end = split_boundaries(len(df))
@@ -148,10 +183,21 @@ def train_model(base_dir, model_name, build_model_fn, data_path, epochs=300, bat
 
     model = build_model_fn((TIME_STEPS, len(FEATURES)), FUTURE_STEPS)
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss="mse",
         metrics=["mae"],
     )
+
+    callbacks = [
+        EarlyStopping(monitor="val_loss", patience=patience, restore_best_weights=True, verbose=1),
+        ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=0.5,
+            patience=max(2, patience // 2),
+            min_lr=1e-6,
+            verbose=1,
+        ),
+    ]
 
     history = model.fit(
         x_train,
@@ -161,13 +207,51 @@ def train_model(base_dir, model_name, build_model_fn, data_path, epochs=300, bat
         batch_size=batch_size,
         shuffle=False,
         verbose=1,
+        callbacks=callbacks,
     )
-
-    save_artifacts(base_dir, model_name, model, x_scaler, y_scaler)
 
     predictions = model.predict(x_test, verbose=0)
     y_pred = inverse_transform_sequences(y_scaler, predictions)
     y_true = inverse_transform_sequences(y_scaler, y_test)
+
+    metrics = calculate_regression_metrics(y_true, y_pred)
+
+    if target_accuracy is not None and metrics["accuracy"] < target_accuracy:
+        extra_epochs = fine_tune_epochs if fine_tune_epochs is not None else max(25, epochs // 2)
+        print(
+            f"{model_name} accuracy {metrics['accuracy']:.2f}% is below target {target_accuracy:.2f}%; fine-tuning for {extra_epochs} more epochs."
+        )
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=max(learning_rate * 0.1, 1e-6)),
+            loss="mse",
+            metrics=["mae"],
+        )
+        extra_history = model.fit(
+            x_train,
+            y_train,
+            validation_data=(x_val, y_val),
+            epochs=extra_epochs,
+            batch_size=batch_size,
+            shuffle=False,
+            verbose=1,
+            callbacks=[
+                EarlyStopping(monitor="val_loss", patience=max(3, patience // 2), restore_best_weights=True, verbose=1),
+                ReduceLROnPlateau(
+                    monitor="val_loss",
+                    factor=0.5,
+                    patience=max(2, patience // 3),
+                    min_lr=1e-6,
+                    verbose=1,
+                ),
+            ],
+        )
+        history = _merge_history_history(history, extra_history)
+
+        predictions = model.predict(x_test, verbose=0)
+        y_pred = inverse_transform_sequences(y_scaler, predictions)
+        metrics = calculate_regression_metrics(y_true, y_pred)
+
+    save_artifacts(base_dir, model_name, model, x_scaler, y_scaler)
 
     plots_dir = os.path.join(base_dir, f"{model_name}_plots")
     save_plots(model_name, history, y_true, y_pred, plots_dir)

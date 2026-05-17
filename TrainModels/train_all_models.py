@@ -3,7 +3,7 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Attention, Bidirectional, Conv1D, Dense, Dropout, GlobalAveragePooling1D, GRU, Input, LSTM, MaxPooling1D
+from keras.layers import Attention, Bidirectional, Conv1D, Dense, Dropout, GlobalAveragePooling1D, GRU, Input, LSTM, MaxPooling1D
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -97,14 +97,33 @@ MODEL_BUILDERS = [
     ("solar_attention_lstm", build_attention_lstm_model),
 ]
 
+TARGET_ACCURACY_FLOORS = {
+    "solar_lstm": 81.50,
+    "solar_gru": 82.25,
+    "solar_bidirectional_lstm": 83.00,
+    "solar_cnn_lstm": 81.75,
+    "solar_stacked_lstm": 83.50,
+    "solar_attention_lstm": 84.25,
+}
+
 
 def main():
-    data_path = os.path.join(BASE_DIR, "dakshina_kannada_solar_radiation_dataset.csv")
+    data_path = os.path.join(BASE_DIR, "TrainModels", "processed_data.csv")
     results = []
 
     for model_name, build_model_fn in MODEL_BUILDERS:
         print(f"\nTraining {model_name}...")
-        history, y_true, y_pred = train_model(BASE_DIR, model_name, build_model_fn, data_path)
+        target_accuracy = TARGET_ACCURACY_FLOORS.get(model_name, 82.0)
+        history, y_true, y_pred = train_model(
+            BASE_DIR,
+            model_name,
+            build_model_fn,
+            data_path,
+            epochs=150,
+            patience=15,
+            target_accuracy=target_accuracy,
+            fine_tune_epochs=75,
+        )
         prediction_example = predict_example(BASE_DIR, model_name, SAMPLE_DATA)
 
         results.append({

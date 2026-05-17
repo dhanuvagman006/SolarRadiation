@@ -364,12 +364,12 @@
     <div class="page">
         <div class="hero">
             <div class="eyebrow">Result in HTML form</div>
-            <h1>{{ model_name | replace('_', ' ') | title }} Forecast Dashboard</h1>
+            <h1>{{ model_name | replace('solar_', '') | replace('_', ' ') | title }} Forecast Dashboard</h1>
             <p class="subtitle">Choose the location and forecast horizon, enter the past weather sequence, and generate a solar radiation result page with a day-by-day table and sizing calculator.</p>
             <div class="hero-strip">
                 <span class="chip">Location: {{ selected_city }}</span>
                 <span class="chip">Duration: {{ duration_options[selected_duration] if selected_duration in duration_options else 7 }} days</span>
-                <span class="chip">Model: {{ model_name | replace('_', ' ') | title }}</span>
+                <span class="chip">Model: {{ model_name | replace('solar_', '') | replace('_', ' ') | title }}</span>
             </div>
         </div>
 
@@ -383,7 +383,7 @@
                     <div style="display:flex; gap:10px; flex-wrap: wrap;">
                         <select id="modelSelect" class="btn secondary" onchange="switchModel(this.value)">
                             {% for m in available_models %}
-                            <option value="{{ m }}" {% if m == model_name %}selected{% endif %}>{{ m | replace('_', ' ') | title }}</option>
+                            <option value="{{ m }}" {% if m == model_name %}selected{% endif %}>{{ m | replace('solar_', '') | replace('_', ' ') | title }}</option>
                             {% endfor %}
                         </select>
                         <button type="button" class="btn secondary" onclick="loadSampleData()">Auto Fill Sample Data</button>
@@ -619,7 +619,7 @@
                         <tbody>
                             {% for m_name, m_data in metrics.items() %}
                             <tr style="{% if m_name == model_name %}background: rgba(72, 191, 227, 0.1);{% endif %}">
-                                <td class="value">{{ m_name | replace('_', ' ') | title }}</td>
+                                <td class="value">{{ m_name | replace('solar_', '') | replace('_', ' ') | title }}</td>
                                 <td>{{ m_data['Accuracy'] }}</td>
                                 <td>{{ m_data['R2'] }}</td>
                                 <td>{{ m_data['MAE'] }}</td>
