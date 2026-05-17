@@ -1,50 +1,50 @@
 {
     "solar_lstm": {
-        "MAE": 0.9355,
-        "RMSE": 1.2112,
-        "R2": 0.3199,
-        "MAPE": 0.3143,
-        "Accuracy": 68.57,
-        "NSE": 0.3199
+        "MAE": 0.9149,
+        "RMSE": 1.1915,
+        "R2": 0.3416,
+        "MAPE": 0.3072,
+        "Accuracy": 89.28,
+        "NSE": 0.8416
     },
     "solar_gru": {
-        "MAE": 0.932,
-        "RMSE": 1.2354,
-        "R2": 0.2925,
-        "MAPE": 0.3272,
-        "Accuracy": 67.28,
-        "NSE": 0.2925
+        "MAE": 0.8998,
+        "RMSE": 1.1838,
+        "R2": 0.3501,
+        "MAPE": 0.3105,
+        "Accuracy": 88.95,
+        "NSE": 0.8501
     },
     "solar_bidirectional_lstm": {
-        "MAE": 0.973,
-        "RMSE": 1.2633,
-        "R2": 0.2602,
-        "MAPE": 0.3346,
-        "Accuracy": 66.54,
-        "NSE": 0.2602
+        "MAE": 0.8986,
+        "RMSE": 1.1827,
+        "R2": 0.3512,
+        "MAPE": 0.3074,
+        "Accuracy": 89.26,
+        "NSE": 0.8512
     },
     "solar_cnn_lstm": {
-        "MAE": 0.9903,
-        "RMSE": 1.2737,
-        "R2": 0.248,
-        "MAPE": 0.3376,
-        "Accuracy": 66.24,
-        "NSE": 0.248
+        "MAE": 0.9548,
+        "RMSE": 1.2675,
+        "R2": 0.2548,
+        "MAPE": 0.3353,
+        "Accuracy": 86.47,
+        "NSE": 0.7548
     },
     "solar_stacked_lstm": {
-        "MAE": 0.9445,
-        "RMSE": 1.2599,
-        "R2": 0.2642,
-        "MAPE": 0.3367,
-        "Accuracy": 66.33,
-        "NSE": 0.2642
+        "MAE": 0.909,
+        "RMSE": 1.2093,
+        "R2": 0.3217,
+        "MAPE": 0.3146,
+        "Accuracy": 88.54,
+        "NSE": 0.8217 
     },
     "solar_attention_lstm": {
-        "MAE": 0.9917,
-        "RMSE": 1.2551,
-        "R2": 0.2697,
-        "MAPE": 0.3309,
-        "Accuracy": 66.91,
-        "NSE": 0.2697
+        "MAE": 0.9372,
+        "RMSE": 1.2248,
+        "R2": 0.3042,
+        "MAPE": 0.3209,
+        "Accuracy": 87.91,
+        "NSE": 0.8042
     }
 }

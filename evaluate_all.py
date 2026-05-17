@@ -3,7 +3,8 @@ import json
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
+import joblib
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import sys
 
 # Add current dir to sys.path so we can import TrainModels
@@ -26,23 +27,34 @@ MODEL_BUILDERS_MAP = dict(MODEL_BUILDERS)
 def calculate_nse(y_true, y_pred):
     return 1 - (np.sum((y_true - y_pred)**2) / np.sum((y_true - np.mean(y_true))**2))
 
+
+def safe_mape(y_true, y_pred, eps=1e-8):
+    """MAPE variant with epsilon to avoid divide-by-zero explosions.
+
+    This matches the definition used during training in TrainModels/common.py.
+    """
+    y_true = np.asarray(y_true).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+    denom = np.clip(np.abs(y_true), eps, None)
+    return float(np.mean(np.abs((y_true - y_pred) / denom)))
+
+
+def accuracy_within_percent(y_true, y_pred, percent=0.1, eps=1e-8):
+    """Return percentage of points where |err| <= percent * |y_true|.
+
+    This is a common and intuitive forecasting metric (tolerance-based accuracy).
+    """
+    y_true = np.asarray(y_true).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+    denom = np.clip(np.abs(y_true), eps, None)
+    rel_err = np.abs(y_pred - y_true) / denom
+    return float(np.mean(rel_err <= percent) * 100.0)
+
 def evaluate_models():
-    data_path = "dakshina_kannada_solar_radiation_dataset.csv"
+    processed_path = os.path.join("TrainModels", "processed_data.csv")
+    data_path = processed_path if os.path.exists(processed_path) else "dakshina_kannada_solar_radiation_dataset.csv"
     df = load_dataset(data_path)
     train_end, val_end = split_boundaries(len(df))
-    x_scaler, y_scaler = fit_scalers(df, train_end)
-    x_sequences, y_sequences, target_end_indices = build_sequences(df, x_scaler, y_scaler)
-    
-    x_train, y_train, x_val, y_val, x_test, y_test = split_sequences(
-        x_sequences,
-        y_sequences,
-        target_end_indices,
-        train_end,
-        val_end,
-    )
-    
-    y_true = inverse_transform_sequences(y_scaler, y_test)
-    y_true_flat = y_true.flatten()
     
     models = [
         "solar_lstm", "solar_gru", "solar_bidirectional_lstm", 
@@ -55,6 +67,29 @@ def evaluate_models():
         try:
             model_path = os.path.join("Models", f"{model_name}.keras")
             model = tf.keras.models.load_model(model_path)
+
+            # Use the scalers that were saved alongside the model during training.
+            x_scaler_path = os.path.join("Models", model_name, "x_scaler.pkl")
+            y_scaler_path = os.path.join("Models", model_name, "y_scaler.pkl")
+            if not (os.path.exists(x_scaler_path) and os.path.exists(y_scaler_path)):
+                raise FileNotFoundError(
+                    f"Missing scaler artifacts for {model_name}. Expected {x_scaler_path} and {y_scaler_path}."
+                )
+
+            x_scaler = joblib.load(x_scaler_path)
+            y_scaler = joblib.load(y_scaler_path)
+
+            x_sequences, y_sequences, target_end_indices = build_sequences(df, x_scaler, y_scaler)
+            x_train, y_train, x_val, y_val, x_test, y_test = split_sequences(
+                x_sequences,
+                y_sequences,
+                target_end_indices,
+                train_end,
+                val_end,
+            )
+
+            y_true = inverse_transform_sequences(y_scaler, y_test)
+            y_true_flat = y_true.flatten()
             
             predictions = model.predict(x_test, verbose=0)
             y_pred = inverse_transform_sequences(y_scaler, predictions)
@@ -63,8 +98,10 @@ def evaluate_models():
             mae = mean_absolute_error(y_true_flat, y_pred_flat)
             rmse = np.sqrt(mean_squared_error(y_true_flat, y_pred_flat))
             r2 = r2_score(y_true_flat, y_pred_flat)
-            mape = mean_absolute_percentage_error(y_true_flat, y_pred_flat)
-            accuracy = max(0, (1 - mape) * 100)
+            mape = safe_mape(y_true_flat, y_pred_flat)
+            accuracy = float(np.clip((1 - mape) * 100, 0.0, 100.0))
+            acc_10 = accuracy_within_percent(y_true_flat, y_pred_flat, percent=0.10)
+            acc_20 = accuracy_within_percent(y_true_flat, y_pred_flat, percent=0.20)
             nse = calculate_nse(y_true_flat, y_pred_flat)
 
             target_accuracy = TARGET_ACCURACY_FLOORS.get(model_name, 82.0)
@@ -90,8 +127,10 @@ def evaluate_models():
                 mae = mean_absolute_error(y_true_flat, y_pred_flat)
                 rmse = np.sqrt(mean_squared_error(y_true_flat, y_pred_flat))
                 r2 = r2_score(y_true_flat, y_pred_flat)
-                mape = mean_absolute_percentage_error(y_true_flat, y_pred_flat)
-                accuracy = max(0, (1 - mape) * 100)
+                mape = safe_mape(y_true_flat, y_pred_flat)
+                accuracy = float(np.clip((1 - mape) * 100, 0.0, 100.0))
+                acc_10 = accuracy_within_percent(y_true_flat, y_pred_flat, percent=0.10)
+                acc_20 = accuracy_within_percent(y_true_flat, y_pred_flat, percent=0.20)
                 nse = calculate_nse(y_true_flat, y_pred_flat)
             
             metrics_dict[model_name] = {
@@ -100,6 +139,8 @@ def evaluate_models():
                 "R2": round(r2, 4),
                 "MAPE": round(mape, 4),
                 "Accuracy": round(accuracy, 2),
+                "Accuracy@10%": round(acc_10, 2),
+                "Accuracy@20%": round(acc_20, 2),
                 "NSE": round(nse, 4)
             }
             print(f"Evaluated {model_name}")
